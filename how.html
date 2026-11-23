@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How it works · LoL Draft Predictor</title>
+  <meta name="description" content="What the LoL Draft Predictor uses, where its data comes from, and how well it did on games it never saw.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>How it works</h1>
+    <p class="tag"><a href="./" style="color:var(--blue)">Back to the predictor</a></p>
+  </header>
+  <main class="how">
+    <h2>What goes in</h2>
+    <p>Only the ten players and ten champions, one per role. No team names: any mix of players works. The model is a
+      penalised logistic regression (ridge) with four ingredients:</p>
+    <ul>
+      <li><strong>Player ratings.</strong> Each player has an Elo-style rating built from every pro game they played
+        since 2023, updated after each match day. The model uses blue's average rating minus red's.</li>
+      <li><strong>Champion strength.</strong> Each champion has a learned weight from pro games; blue's picks add
+        theirs and red's subtract.</li>
+      <li><strong>Champion mastery.</strong> How much each player has played their champion in pro play across their
+        whole career, with older games counting less (a 12-month half-life), grouped into five levels. The model uses
+        the difference in average level.</li>
+      <li><strong>Blue side.</strong> A fixed edge for the blue side, which wins slightly more often in pro play.</li>
+    </ul>
+    <p>The ingredients add up to a score; the chance is 1 / (1 + e<sup>-score</sup>). "Show the math" on the prediction
+      page lists this draft's numbers.</p>
+    <svg class="diagram" viewBox="0 0 360 470" role="img" aria-label="How a prediction is calculated: four ingredients are weighted and added into a score, which becomes the win chance; lane counters are shown alongside but not used" font-family="system-ui, Segoe UI, sans-serif">
+      <defs><marker id="calc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#556"/></marker></defs>
+      <rect x="20" y="10" width="155" height="58" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="97.5" y="28.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Player ratings</text>
+      <text x="97.5" y="42.7" text-anchor="middle" font-size="11" fill="#9aa4b2">blue average rating</text>
+      <text x="97.5" y="56.7" text-anchor="middle" font-size="11" fill="#9aa4b2">minus red average</text>
+      <rect x="185" y="10" width="155" height="58" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="262.5" y="28.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Champion strength</text>
+      <text x="262.5" y="42.7" text-anchor="middle" font-size="11" fill="#9aa4b2">blue picks' weights</text>
+      <text x="262.5" y="56.7" text-anchor="middle" font-size="11" fill="#9aa4b2">minus red picks' weights</text>
+      <rect x="20" y="78" width="155" height="58" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="97.5" y="96.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Champion mastery</text>
+      <text x="97.5" y="110.7" text-anchor="middle" font-size="11" fill="#9aa4b2">blue average level</text>
+      <text x="97.5" y="124.7" text-anchor="middle" font-size="11" fill="#9aa4b2">minus red average</text>
+      <rect x="185" y="78" width="155" height="58" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="262.5" y="96.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Blue side</text>
+      <text x="262.5" y="110.7" text-anchor="middle" font-size="11" fill="#9aa4b2">a fixed edge</text>
+      <text x="262.5" y="124.7" text-anchor="middle" font-size="11" fill="#9aa4b2">for the blue team</text>
+      <text x="180" y="156" text-anchor="middle" font-size="11" fill="#9aa4b2">each times its learned weight, then added</text>
+      <line x1="97" y1="136" x2="150" y2="166" stroke="#556" stroke-width="1.5" marker-end="url(#calc-arrow)"/>
+      <line x1="262" y1="136" x2="210" y2="166" stroke="#556" stroke-width="1.5" marker-end="url(#calc-arrow)"/>
+      <rect x="60" y="168" width="240" height="44" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="180.0" y="186.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Score (log-odds)</text>
+      <text x="180.0" y="200.7" text-anchor="middle" font-size="11" fill="#9aa4b2">positive favours blue</text>
+      <line x1="180" y1="212" x2="180" y2="232" stroke="#556" stroke-width="1.5" marker-end="url(#calc-arrow)"/>
+      <rect x="60" y="234" width="240" height="44" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="180.0" y="252.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Chance = 1 / (1 + e^-score)</text>
+      <text x="180.0" y="266.7" text-anchor="middle" font-size="11" fill="#9aa4b2">turns any score into 0-100%</text>
+      <line x1="130" y1="278" x2="110" y2="300" stroke="#556" stroke-width="1.5" marker-end="url(#calc-arrow)"/>
+      <line x1="230" y1="278" x2="250" y2="300" stroke="#556" stroke-width="1.5" marker-end="url(#calc-arrow)"/>
+      <rect x="20" y="302" width="165" height="58" rx="8" fill="#16233a" stroke="#4da3ff" stroke-width="1.5"/>
+      <text x="102.5" y="320.7" text-anchor="middle" font-size="11" fill="#4da3ff" font-weight="700">Pre-game win %</text>
+      <text x="102.5" y="334.7" text-anchor="middle" font-size="11" fill="#9aa4b2">the big number,</text>
+      <text x="102.5" y="348.7" text-anchor="middle" font-size="11" fill="#9aa4b2">split into the breakdown</text>
+      <rect x="195" y="302" width="145" height="58" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="267.5" y="320.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">The curve</text>
+      <text x="267.5" y="334.7" text-anchor="middle" font-size="11" fill="#9aa4b2">same idea, extra weights</text>
+      <text x="267.5" y="348.7" text-anchor="middle" font-size="11" fill="#9aa4b2">for minutes 20-40</text>
+      <rect x="20" y="380" width="320" height="76" rx="8" fill="#0f1623" stroke="#556" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="180.0" y="407.7" text-anchor="middle" font-size="11" fill="#9aa4b2" font-weight="700">Lane counters (shown, not used)</text>
+      <text x="180.0" y="421.7" text-anchor="middle" font-size="11" fill="#9aa4b2">u.gg solo queue win rate per lane, plus the edge</text>
+      <text x="180.0" y="435.7" text-anchor="middle" font-size="11" fill="#9aa4b2">beyond both champions' overall strength</text>
+    </svg>
+
+    <h2>The curve over game time</h2>
+    <p>The points at 20 to 40 minutes answer a narrower question: among games still going at that minute, how often
+      does blue win? A second set of weights handles those minutes, so ratings and mastery can matter more or less as
+      games get longer. The big pre-game number is the overall prediction.</p>
+
+    <h2>Where the data comes from</h2>
+    <svg class="diagram" viewBox="0 0 360 470" role="img" aria-label="Pipeline: pro games and player histories are scraped and cleaned, explored, turned into features and a tested model, exported with u.gg lane data, and run in this page" font-family="system-ui, Segoe UI, sans-serif">
+      <defs><marker id="pipe-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#556"/></marker></defs>
+      <rect x="20" y="10" width="150" height="46" rx="8" fill="#0f1623" stroke="#9aa4b2" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="95.0" y="29.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">gol.gg</text>
+      <text x="95.0" y="43.7" text-anchor="middle" font-size="11" fill="#9aa4b2">pro games since 2023</text>
+      <rect x="190" y="10" width="150" height="46" rx="8" fill="#0f1623" stroke="#9aa4b2" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="265.0" y="29.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Leaguepedia</text>
+      <text x="265.0" y="43.7" text-anchor="middle" font-size="11" fill="#9aa4b2">identities, roles, careers</text>
+      <line x1="95" y1="56" x2="95" y2="78" stroke="#556" stroke-width="1.5" marker-end="url(#pipe-arrow)"/>
+      <line x1="265" y1="56" x2="265" y2="78" stroke="#556" stroke-width="1.5" marker-end="url(#pipe-arrow)"/>
+      <rect x="20" y="80" width="320" height="46" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="180.0" y="99.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Scrape and clean</text>
+      <text x="180.0" y="113.7" text-anchor="middle" font-size="11" fill="#9aa4b2">games, teams, players, roles, career picks</text>
+      <line x1="180" y1="126" x2="180" y2="146" stroke="#556" stroke-width="1.5" marker-end="url(#pipe-arrow)"/>
+      <rect x="20" y="148" width="320" height="46" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="180.0" y="167.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Explore and decide</text>
+      <text x="180.0" y="181.7" text-anchor="middle" font-size="11" fill="#9aa4b2">which ideas really predict wins (27 tested decisions)</text>
+      <line x1="180" y1="194" x2="180" y2="214" stroke="#556" stroke-width="1.5" marker-end="url(#pipe-arrow)"/>
+      <rect x="20" y="216" width="320" height="46" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="180.0" y="235.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Build features</text>
+      <text x="180.0" y="249.7" text-anchor="middle" font-size="11" fill="#9aa4b2">player ratings, mastery, champions, blue side</text>
+      <line x1="115" y1="262" x2="115" y2="282" stroke="#556" stroke-width="1.5" marker-end="url(#pipe-arrow)"/>
+      <rect x="20" y="284" width="190" height="56" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="115.0" y="301.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Train and test the model</text>
+      <text x="115.0" y="315.7" text-anchor="middle" font-size="11" fill="#9aa4b2">ridge regression, judged on</text>
+      <text x="115.0" y="329.7" text-anchor="middle" font-size="11" fill="#9aa4b2">games it never saw</text>
+      <rect x="225" y="284" width="115" height="56" rx="8" fill="#0f1623" stroke="#9aa4b2" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="282.5" y="301.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">u.gg</text>
+      <text x="282.5" y="315.7" text-anchor="middle" font-size="11" fill="#9aa4b2">lane matchups,</text>
+      <text x="282.5" y="329.7" text-anchor="middle" font-size="11" fill="#9aa4b2">last 5 patches</text>
+      <line x1="115" y1="340" x2="115" y2="360" stroke="#556" stroke-width="1.5" marker-end="url(#pipe-arrow)"/>
+      <line x1="282" y1="340" x2="282" y2="360" stroke="#556" stroke-width="1.5" marker-end="url(#pipe-arrow)"/>
+      <rect x="20" y="362" width="320" height="40" rx="8" fill="#16233a" stroke="#2c3e5c" stroke-width="1.5"/>
+      <text x="180.0" y="385.7" text-anchor="middle" font-size="11" fill="#e6e9ef" font-weight="700">Export one data file (site.json)</text>
+      <line x1="180" y1="402" x2="180" y2="422" stroke="#556" stroke-width="1.5" marker-end="url(#pipe-arrow)"/>
+      <rect x="20" y="424" width="320" height="40" rx="8" fill="#16233a" stroke="#4da3ff" stroke-width="1.5"/>
+      <text x="180.0" y="447.7" text-anchor="middle" font-size="11" fill="#4da3ff" font-weight="700">This website: every prediction runs in your browser</text>
+    </svg>
+    <p>Pro games from LCK, LPL, LEC and LCS (plus international events between their teams) from 2023 on, from gol.gg;
+      player identities, roles and career histories back to 2011 from Leaguepedia. Lane win rates on the prediction
+      page come from u.gg's Master+ solo queue statistics and are shown for context only: the model does not use them.</p>
+    <p>A high lane win rate can just mean one champion is overtuned that patch. So each lane also shows a counter edge:
+      every champion gets an overall strength per role, fitted from all its matchups, and the edge is how much better
+      (or worse) this particular matchup goes than those two strengths predict. An overtuned champion that beats
+      everyone equally has no edge. Edges are combined across every stored patch, each weighted by how precise it is,
+      so a patch with a handful of games barely counts. The edge shown is then pulled toward zero according to how
+      noisy it is and how big real counters are in that lane (they are largest in top and mid, smallest in jungle and
+      support), which predicted the next patch's matchups about 10% better than the raw edge.</p>
+
+    <h2>How it was tested</h2>
+    <p id="test-numbers">Loading the test numbers...</p>
+
+    <h2>What it does not know</h2>
+    <ul>
+      <li>Champion synergy, lane counters and draft chemistry: tested on pro games and found too noisy to help, so they
+        are left out (for now).</li>
+      <li>Patch changes, recent form beyond the ratings, roster news, side selection strategy and in-game events.</li>
+      <li>Players who have not played pro games recently: their rating is as of their last match.</li>
+    </ul>
+  </main>
+  <footer class="foot">
+    <p>Pro game data: gol.gg and Leaguepedia (CC BY-SA). Lane counter data: u.gg.</p>
+    <p>LoL Draft Predictor isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
+  </footer>
+  <script type="module">
+    const out = document.getElementById("test-numbers");
+    try {
+      const { meta, model } = await (await fetch("data/site.json")).json();
+      const c = meta.card;
+      if (!c) throw new Error("no model card");
+      const year = 2010 + Number(c.test_season.slice(1));
+      const pct = (x) => `${(100 * x).toFixed(1)}%`;
+      const r = meta.reliability;
+      const gap = r && r.favourite_n ? Math.round(100 * (r.favourite_predicted - r.favourite_won)) : null;
+      const direction = c.slope_hi !== null && c.slope_hi < 1 ? "run a little too far from 50%"
+        : c.slope_lo !== null && c.slope_lo > 1 ? "run a little too close to 50%" : "look about right";
+      const confidence = gap > 0 ? `about ${gap} points too confident` : gap < 0 ? `about ${-gap} points not confident enough`
+        : "about right";
+      out.textContent = `The model was trained only on earlier seasons and then asked to predict all ` +
+        `${c.games ? c.games.toLocaleString("en") + " " : ""}games from ${year} before seeing the results. It picked ` +
+        `the winner in ${pct(c.accuracy)} of them. Its log loss (lower is better; it punishes confident wrong answers) ` +
+        `was ${c.log_loss.toFixed(3)}, against ${c.coin_flip_log_loss.toFixed(3)} for a coin flip. ` +
+        (c.slope === null ? "" : `Its percentages ${direction} (calibration slope ${c.slope.toFixed(2)}, where 1 is perfect)` +
+          (gap !== null ? `: when it gave a team 70% or more, it was ${confidence}. ` : ". ")) +
+        (model.stretch ? "The percentages shown are corrected by a stretch learned from earlier seasons. "
+          : "Corrections learned from earlier seasons did not clearly help, so the numbers are shown as they come. ") +
+        `Ratings are as of ${meta.run_date}.`;
+    } catch (error) {
+      out.textContent = `The test numbers could not be loaded (${error.message}).`;
+    }
+  </script>
+</body>
+</html>
